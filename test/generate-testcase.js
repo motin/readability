@@ -1,4 +1,4 @@
-var debug = false;
+var debug = true;
 
 var path = require("path");
 var fs = require("fs");
@@ -33,7 +33,6 @@ var urls = [];
 csv
   .fromPath("urls.csv")
   .on("data", function(data) {
-    console.log('data', data);
     urls.push(data);
   })
   .on("end", function() {
@@ -78,6 +77,9 @@ csv
 function generateTestCase(slug, argURL, destRoot) {
 
 fs.mkdir(destRoot, function(err) {
+if (debug) {
+  console.log("generateTestCase", slug, argURL, destRoot);
+}
   if (err) {
     var sourceFile = path.join(destRoot, "source.html");
     fs.exists(sourceFile, function(exists) {
