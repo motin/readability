@@ -132,13 +132,14 @@ async function fetchSource(url, callbackFn) {
     response.on("data", function(chunk) {
       rv += chunk;
     });
-    response.on("end", function() {
+    response.on("end", async function() {
       if (debug) {
         console.log("End received");
       }
       // Sanitize:
       rv = prettyPrint(serializeDocument(jsdom(rv)));
-      callbackFn(rv);
+      await callbackFn(rv);
+      resolve();
     });
   });
   });
