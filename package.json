@@ -30,5 +30,8 @@
     "jsdom": "^7.0",
     "matcha": "^0.6.0",
     "mocha": "^2.2.*"
+  },
+  "dependencies": {
+    "fast-csv": "^2.4.1"
   }
 }

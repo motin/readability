@@ -8,3 +8,5 @@ node_modules
 .sw?
 *.jar
 *.xpi
+results.json
+urls.csv

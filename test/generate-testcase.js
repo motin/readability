@@ -14,6 +14,7 @@ var JSDOMParser = readability.JSDOMParser;
 
 var FFX_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0";
 
+/*
 if (process.argv.length < 3) {
   console.error("Need at least a destination slug and potentially a URL (if the slug doesn't have source).");
   process.exit(0);
@@ -22,8 +23,59 @@ if (process.argv.length < 3) {
 
 var slug = process.argv[2];
 var argURL = process.argv[3]; // Could be undefined, we'll warn if it is if that is an issue.
+*/
 
-var destRoot = path.join(__dirname, "test-pages", slug);
+var csv = require("fast-csv");
+
+var results = [];
+
+var urls = [];
+csv
+  .fromPath("urls.csv")
+  .on("data", function(data) {
+    console.log('data', data);
+    urls.push(data);
+  })
+  .on("end", function() {
+    console.log("done reading urls.csv");
+
+    for (var i = 0, len = urls.length; i < len; i++) {
+      var csvRow = urls[i];
+      var slug = csvRow[0];
+      var argURL = csvRow[1];
+      var destRoot = path.join(__dirname, "test-pages", slug);
+      generateTestCase(slug, argURL, destRoot);
+      var metadataDestPath = path.join(destRoot, "expected-metadata.json");
+
+      if (fs.existsSync(metadataDestPath)) {
+        var metadataJson = fs.readFileSync(metadataDestPath, { encoding: "utf-8" });
+        var metadata = JSON.parse(metadataJson);
+        results.push({
+          url: argURL,
+          readerable: metadata.readerable,
+        });
+      } else {
+        results.push({
+          url: argURL,
+          readerable: null,
+        });
+      }
+    }
+
+    console.log('Storing results.json');
+    fs.writeFile('./results.json', JSON.stringify(results, null, 2) + "\n", function(resultsWriteErr) {
+      if (resultsWriteErr) {
+        console.error("Couldn't write data to results.json!");
+        console.error(resultsWriteErr);
+      }
+
+      process.exit(0);
+    });
+
+  });
+
+
+function generateTestCase(slug, argURL, destRoot) {
 
 fs.mkdir(destRoot, function(err) {
   if (err) {
@@ -158,8 +210,9 @@ function runReadability(source, destPath, metadataDestPath) {
         console.error(metadataWriteErr);
       }
 
-      process.exit(0);
+      //process.exit(0);
     });
   });
 }
 
+}
