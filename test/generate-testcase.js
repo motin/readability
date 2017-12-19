@@ -1,5 +1,3 @@
-var debug = true;
-
 var path = require("path");
 var fs = require("fs");
 var jsdom = require("jsdom").jsdom;
@@ -14,6 +12,9 @@ var Readability = readability.Readability;
 var JSDOMParser = readability.JSDOMParser;
 
 var FFX_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0";
+
+var csvPath = process.argv[2];
+var debug = process.argv[3] !== undefined;
 
 /*
 if (process.argv.length < 3) {
@@ -41,7 +42,7 @@ var i = 0;
 
 //var urls = [];
 csv
-  .fromPath("output_new.csv")
+  .fromPath(csvPath)
   .transform(function(data) {
     const url = data.join('');
     return ['md5_' + md5(url), url];
@@ -141,6 +142,7 @@ csv
 
     console.log('Wait for all outstanding promises to be completed...');
     await Promise.all(promises);
+    console.log('Done!');
 
     console.log('Storing results.json');
     fs.writeFile('./results.json', JSON.stringify(results, null, 2) + "\n", function(resultsWriteErr) {
