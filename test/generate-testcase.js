@@ -44,8 +44,11 @@ var i = 0;
 csv
   .fromPath(csvPath)
   .transform(function(data) {
-    const url = data.join('');
-    return ['md5_' + md5(url), url];
+    if (csvPath.indexOf('output') > -1) {
+      const url = data.join('');
+      return ['md5_' + md5(url), url];
+    }
+    return data;
   })
   .on("data", async function(data) {
 
@@ -144,6 +147,7 @@ csv
     await Promise.all(promises);
     console.log('Done!');
 
+    /*
     console.log('Storing results.json');
     fs.writeFile('./results.json', JSON.stringify(results, null, 2) + "\n", function(resultsWriteErr) {
       if (resultsWriteErr) {
@@ -153,6 +157,7 @@ csv
 
       process.exit(0);
     });
+    */
 
   });
 
