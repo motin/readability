@@ -7,6 +7,7 @@ var prettyPrint = require("./utils").prettyPrint;
 var serializeDocument = require("jsdom").serializeDocument;
 var http = require("http");
 var urlparse = require("url").parse;
+var md5 = require('md5');
 
 var readability = require("../index");
 var Readability = readability.Readability;
@@ -40,7 +41,11 @@ var i = 0;
 
 //var urls = [];
 csv
-  .fromPath("urls.csv")
+  .fromPath("output_new.csv")
+  .transform(function(data) {
+    const url = data.join('');
+    return ['md5_' + md5(url), url];
+  })
   .on("data", async function(data) {
 
     promises.push(new Promise(async function(resolve, reject) {
