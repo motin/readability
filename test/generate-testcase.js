@@ -27,44 +27,110 @@ var argURL = process.argv[3]; // Could be undefined, we'll warn if it is if that
 
 var csv = require("fast-csv");
 
-var results = [];
+var promises = [];
 
-var urls = [];
+//var results = [];
+
+var i = 0;
+
+//var urls = [];
 csv
   .fromPath("urls.csv")
-  .on("data", function(data) {
-    urls.push(data);
-  })
-  .on("end", async function() {
-    console.log("done reading urls.csv");
+  .on("data", async function(data) {
 
-    for (var i = 0, len = urls.length; i < len; i++) {
-      var csvRow = urls[i];
+    promises.push(new Promise(async function(resolve, reject) {
+
+      var csvRow = data;
+
+      console.log('csvRow', ++i, csvRow);
+      //urls.push(csvRow);
+      //process.exit(0);
+
       var slug = csvRow[0];
       var argURL = csvRow[1];
       var destRoot = path.join(__dirname, "test-pages", slug);
-      try {
-        await generateTestCase(slug, argURL, destRoot);
-      } catch (err) {
-        // ignore errors
-        console.error('test-case generation failed: ', err);
-      }
       var metadataDestPath = path.join(destRoot, "expected-metadata.json");
+      var failureJsonPath = path.join(destRoot, "failure.json");
 
+      // do not retry previously failed attempts
+      if (fs.existsSync(failureJsonPath)) {
+        console.log('Skipping previously failed ' + argURL);
+        /*
+        var failure = fs.readFileSync(failureJsonPath, { encoding: "utf-8" });
+        results.push({
+          url: argURL,
+          readerable: null,
+          failure: failure,
+        });
+        */
+        resolve();
+        return;
+      }
+
+      // only attempt to generate test-case if we have not already done so
+      if (!fs.existsSync(metadataDestPath)) {
+        try {
+          console.log('Attempting ' + argURL);
+          await generateTestCase(slug, argURL, destRoot);
+        } catch (err) {
+          // ignore errors
+          console.error('test-case generation failed: ', err);
+        }
+      }
+
+      // on success, collect readerable status from expected-metadata.json
       if (fs.existsSync(metadataDestPath)) {
+
+        console.log('Success with ' + argURL);
+        /*
         var metadataJson = fs.readFileSync(metadataDestPath, { encoding: "utf-8" });
         var metadata = JSON.parse(metadataJson);
         results.push({
           url: argURL,
           readerable: metadata.readerable,
         });
+        */
+        resolve();
+        return;
+
       } else {
-        results.push({
-          url: argURL,
-          readerable: null,
+
+        console.log('Failure with ' + argURL);
+
+        var failure = {
+          type: 'No expected-metadata.json written',
+          when: new Date()
+        };
+
+        // mark this url as defunct since we have tried to generate a test-case for it but failed
+        fs.writeFile(failureJsonPath, JSON.stringify(failure, null, 2), async function(err) {
+          if (err) {
+            console.error("Couldn't write data to " + failureJsonPath);
+            console.error(err);
+            return;
+          }
+          /*
+          results.push({
+            url: argURL,
+            readerable: null,
+            failure: failure,
+          });
+          */
+          resolve();
+          return;
+
         });
+
       }
-    }
+
+    }));
+
+  })
+  .on("end", async function() {
+    console.log("done reading csv");
+
+    console.log('Wait for all outstanding promises to be completed...');
+    await Promise.all(promises);
 
     console.log('Storing results.json');
     fs.writeFile('./results.json', JSON.stringify(results, null, 2) + "\n", function(resultsWriteErr) {
