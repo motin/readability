@@ -11,3 +11,4 @@ node_modules
 results.json
 urls.csv
 test/test-pages/md5_*
+*.csv*
