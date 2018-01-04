@@ -10,3 +10,4 @@ node_modules
 *.xpi
 results.json
 urls.csv
+test/test-pages/md5_*

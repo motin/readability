@@ -56,7 +56,9 @@ csv
 
       var csvRow = data;
 
-      console.log('csvRow', ++i, csvRow);
+      i++;
+      var j = i;
+      console.log('csvRow', j, csvRow);
       //urls.push(csvRow);
       //process.exit(0);
 
@@ -68,7 +70,7 @@ csv
 
       // do not retry previously failed attempts
       if (fs.existsSync(failureJsonPath)) {
-        console.log('Skipping previously failed ' + argURL);
+        console.log(j + ': Skipping previously failed ' + argURL);
         /*
         var failure = fs.readFileSync(failureJsonPath, { encoding: "utf-8" });
         results.push({
@@ -84,8 +86,8 @@ csv
       // only attempt to generate test-case if we have not already done so
       if (!fs.existsSync(metadataDestPath)) {
         try {
-          console.log('Attempting ' + argURL);
-          await generateTestCase(slug, argURL, destRoot);
+          console.log(j + ': Attempting ' + argURL);
+          await generateTestCase(slug, argURL, destRoot).catch(console.log.bind(console));
         } catch (err) {
           // ignore errors
           console.error('test-case generation failed: ', err);
@@ -95,7 +97,7 @@ csv
       // on success, collect readerable status from expected-metadata.json
       if (fs.existsSync(metadataDestPath)) {
 
-        console.log('Success with ' + argURL);
+        console.log(j + ': Success with ' + argURL);
         /*
         var metadataJson = fs.readFileSync(metadataDestPath, { encoding: "utf-8" });
         var metadata = JSON.parse(metadataJson);
@@ -109,7 +111,7 @@ csv
 
       } else {
 
-        console.log('Failure with ' + argURL);
+        console.log(j + ': Failure with ' + argURL);
 
         var failure = {
           type: 'No expected-metadata.json written',
@@ -209,7 +211,7 @@ async function fetchSource(url, callbackFn) {
     if (debug) {
       console.log("Requesting URL:", url);
     }
-  client.get(options, function(response) {
+  var req = client.get(options, function(response) {
     if (debug) {
       console.log("STATUS:", response.statusCode);
       console.log("HEADERS:", JSON.stringify(response.headers));
@@ -220,8 +222,11 @@ async function fetchSource(url, callbackFn) {
       rv += chunk;
     });
     response.on("error", function (err) {
-      console.error(err);
-      reject(err);
+      if (debug) {
+        console.error(err);
+      }
+      resolve(err);
+      return;
     });
     response.on("end", async function() {
       if (debug) {
@@ -231,10 +236,31 @@ async function fetchSource(url, callbackFn) {
       rv = prettyPrint(serializeDocument(jsdom(rv)));
       await callbackFn(rv);
       resolve();
+      return;
     });
   });
+
+    req.on('socket', function(socket) {
+      socket.setTimeout(5000);
+      socket.on('timeout', function() {
+        req.abort();
+      });
+    });
+
+    req.on('error', function(err) {
+      if (debug) {
+        if (err.code === "ECONNRESET") {
+          console.log("Timeout occured");
+        }
+        console.error(err);
+      }
+      resolve(err);
+      return;
+    });
+
   } catch (err) {
-    reject(err);
+    resolve(err);
+    return;
   }
   });
 }
